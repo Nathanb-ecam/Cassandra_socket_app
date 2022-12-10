@@ -1,0 +1,33 @@
+*{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+:root{
+    --table-color:rgba(30, 55, 73, 0.713);
+    --username-color:rgb(14, 111, 14);
+    --message-color:white;
+}
+.table-container{
+    width: 70%;
+    height: 60vh;
+}
+#messages{
+    background: var(--table-color);
+    margin:2rem;
+    padding:1rem;
+}
+#messages li{
+    display:flex;
+    align-items: center;
+
+}
+.message-user{
+    color:var(--username-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.message-content{
+    color:var(--message-color);
+}
