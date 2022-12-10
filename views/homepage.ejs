@@ -21,7 +21,13 @@
         var send = function() {
             var text = document.getElementById('messageInput').value;
             var user = document.querySelector('#username').value;
-            socket.emit('message', {"user":user,"content":text})
+            if (text!=""){
+                if (user!=""){
+                    socket.emit('message', {"user":user,"content":text});
+                    document.getElementById('messageInput').value='';
+                }
+                
+            }
         }
         
         var receive = function(message) {
@@ -34,8 +40,6 @@
             p_content.innerText = message.content;
             li.appendChild(p_user);
             li.appendChild(p_content);
-            // li.innerText = message.user + message.content;
-            
             document.getElementById('messages').appendChild(li);
         }
 
@@ -46,26 +50,49 @@
         }
         var login = function(){
             var text = document.getElementById('username').value;
-            // console.log(text);
-            // console.log({"Username":text});
-            socket.emit('message',{"user":text,"content":""});
+            if (text!=""){
+                socket.emit('message',{"user":text,"content":""});
+            }
+        }
+        var handle_input = function(event){
+            if (event.keyCode==13){
+                send();
+            }
         }
         
         socket.on('message', receive);
         socket.on('onload', onload);
     
     </script>
-
-
-    <h1>Enter Session Username</h1>
-    <input type="text" id="username"><button onclick="login()">log in</button>
-    <div class="table-container">
-        <ul id="messages">
-            
+    <header>
+        <ul>
+            <li class="project-name">Cassandra DB</li>
+            <li class="group">
+                <p>Edgar</p>
+                <p>Nathan</p>
+                <p>Nick</p>
+                <p>Jordan</p>
+            </li>
         </ul>
-        <div class="zone-saisie">
-            <input id="messageInput" /> <button onclick="send()"> Envoie</button>
+    </header>
+    
+    <div class="area">
+        <div class="username-selection">
+            <p>Enter Username</p>
+            <input type="text" id="username">
+            <button onclick="login()">Confirm</button>
+        </div>
+        
+        <div class="table-container">
+            <ul id="messages">
+                
+            </ul>
+            <div class="message-input">
+                <input id="messageInput" type="input" onkeypress="handle_input(event)" placeholder="Message to send"/> 
+            </div>
         </div>
     </div>
+
+    
 </body> 
 </html>
