@@ -34,16 +34,13 @@ io.on("connection", function(socket) {
         if(error!=undefined){
             console.log('Error:',error);
         }else{
-            console.log(result.rows);
             for (var i = 0; i < result.rows.length; i++) {
                 sender = result.rows[i].sender;
                 content = result.rows[i].message;
-                console.log("___________________--");
-                console.log(sender,content);
                 socket.send({"user":sender,"content":content})
             }
         }
-      });
+    });
     socket.on("disconnect", async function() {
         //Quand un client se déconecte on rajoute ses elements ds la db
         // => plusieurs element identique peuvent se trouver ds la db....
@@ -53,8 +50,7 @@ io.on("connection", function(socket) {
         } catch {
             console.log("restart");
         }
-   
-        });
+    });
 
     socket.on('message', async function(message) {
         let user = message.user;
@@ -88,7 +84,7 @@ io.on("connection", function(socket) {
                     }
                 }
             });
-            }
+        }
     });
 
     socket.on('onload', function(e) {
@@ -105,7 +101,6 @@ io.on("connection", function(socket) {
             }
           });
     });
-
 });
 
 server.listen(process.env.PORT || 3000, () => { 
