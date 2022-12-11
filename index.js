@@ -12,7 +12,7 @@ app.use(express.static('public'));
 //pas d'auto-incrmeent sur cassandra
 const querySelectID = "SELECT next_id FROM ids WHERE id_name = 'message_id'";
 const queryInsertNextId = "UPDATE ids SET next_id = (?) WHERE id_name = 'message_id'";
-const querySelect = 'SELECT * FROM messages'; 
+const querySelect = "SELECT * FROM messages "; 
 const queryInsert = 'INSERT INTO messages (id, sender, message) VALUES (?,?,?) USING TTL 86400'; 
 let tempMessages = {};
 let connection = require('./db.js');
@@ -28,7 +28,8 @@ app.use('/', routes);
 //Socket
 io.on("connection", function(socket) {
     console.log("Client connected: " + socket.id);
-    console.log('Trying to read db');
+    console.log('Reading db ...');
+    socket.send({"user":"server","content":"Reading db ..."})
     connection.execute(querySelect, function(error,result){
         if(error!=undefined){
             console.log('Error:',error);
@@ -37,6 +38,7 @@ io.on("connection", function(socket) {
             for (var i = 0; i < result.rows.length; i++) {
                 sender = result.rows[i].sender;
                 content = result.rows[i].message;
+                console.log("___________________--");
                 console.log(sender,content);
                 socket.send({"user":sender,"content":content})
             }
@@ -47,25 +49,20 @@ io.on("connection", function(socket) {
         // => plusieurs element identique peuvent se trouver ds la db....
         console.log(socket.id + " disconnected");
         io.emit('message',{"user":tempMessages[socket.id].user,"content":"just disconnected ..."});
-        console.log("tempMessages....");
-        await connection.execute(queryInsert, async function(error, result){
+        // console.log("tempMessages....");
+        await connection.execute(querySelectID, async function(error, result){
             if(error!=undefined){
                 console.log('Error:',error);
             }else{
-
-                // for (var i = 0; i < tempMessages.length; i++) {
-                //     console.log(result.rows);
-                //     await connection.execute(queryInsert, [result.rows[0].next_id, tempMessages[i][1], tempMessages[i][0]], { prepare: true });
-                //     console.log('wat');
-                //     connection.execute(queryInsertNextId, [result.rows[0].next_id + i], {prepare: true});
-                //     console.log('added');
-                // }
+                let i = 0;
                 for (const sock_id of Object.keys(tempMessages)) {
-                    console.log("message for now",tempMessages[sock_id].user + tempMessages[sock_id].content);
+                    // console.log("message for now",tempMessages[sock_id].user + tempMessages[sock_id].content);
                     await connection.execute(queryInsert, [result.rows[0].next_id, tempMessages[sock_id].user, tempMessages[sock_id].content], { prepare: true });
-                    console.log('wat');
+                    // console.log('wat');
                     connection.execute(queryInsertNextId, [result.rows[0].next_id + i], {prepare: true});
-                    console.log('added');
+                    // tempMessages. 
+                    // console.log('added');
+                    i ++;
                 }
             }
         });
@@ -85,7 +82,7 @@ io.on("connection", function(socket) {
             tempMessages[socket.id]={"user":user,"content":content};
             console.log("Prob",user);
         }
-        console.log("tempMessages",tempMessages[user]);
+        // console.log("tempMessages",tempMessages[user]);
 
         // io.emit('message', message)
     });
