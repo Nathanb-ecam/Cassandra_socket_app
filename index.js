@@ -10,10 +10,10 @@ app.use(express.static('public'));
 //Prépa queries
 //USING TTL : time to live :: si dépassé ciau le message pouf pouf disparu asta la vista
 //pas d'auto-incrmeent sur cassandra
-const querySelectID = "SELECT next_id FROM ids WHERE id_name = 'message_id'";
-const queryInsertNextId = "UPDATE ids SET next_id = (?) WHERE id_name = 'message_id'";
-const querySelect = "SELECT * FROM messages "; 
-const queryInsert = 'INSERT INTO messages (id, sender, message) VALUES (?,?,?) USING TTL 86400'; 
+const querySelectID = "SELECT next_id FROM ids WHERE id_name = 'message_id';";
+const queryInsertNextId = "UPDATE ids SET next_id = (?) WHERE id_name = 'message_id';";
+const querySelect = "SELECT * FROM messages LIMIT 10 ;"; 
+const queryInsert = 'INSERT INTO messages (id, sender, message) VALUES (?,?,?);'; 
 let tempMessages = {};
 let connection = require('./db.js');
 
@@ -48,43 +48,47 @@ io.on("connection", function(socket) {
         //Quand un client se déconecte on rajoute ses elements ds la db
         // => plusieurs element identique peuvent se trouver ds la db....
         console.log(socket.id + " disconnected");
-        io.emit('message',{"user":tempMessages[socket.id].user,"content":"just disconnected ..."});
-        // console.log("tempMessages....");
-        await connection.execute(querySelectID, async function(error, result){
-            if(error!=undefined){
-                console.log('Error:',error);
-            }else{
-                let i = 0;
-                for (const sock_id of Object.keys(tempMessages)) {
-                    // console.log("message for now",tempMessages[sock_id].user + tempMessages[sock_id].content);
-                    await connection.execute(queryInsert, [result.rows[0].next_id, tempMessages[sock_id].user, tempMessages[sock_id].content], { prepare: true });
-                    // console.log('wat');
-                    connection.execute(queryInsertNextId, [result.rows[0].next_id + i], {prepare: true});
-                    // tempMessages. 
-                    // console.log('added');
-                    i ++;
-                }
-            }
+        try {
+            io.emit('message',{"user": tempMessages[socket.id].user,"content":"just disconnected ..."});
+        } catch {
+            console.log("restart");
+        }
+   
         });
-    });
 
-    socket.on('message', function(message) {
+    socket.on('message', async function(message) {
         let user = message.user;
         let content = message.content;
-        console.log("Message : " + user);
+        console.log("Message : " + content);
         // tempMessages[socket.id]={"user":user,"content":content};
         if (content==""){
             console.log(user + " is now connected");
             io.emit('message',{"user":user,"content":"is now connected ..."})
         } 
         else{
-            io.emit('message', {"user":user,"content":content});
-            tempMessages[socket.id]={"user":user,"content":content};
-            console.log("Prob",user);
-        }
-        // console.log("tempMessages",tempMessages[user]);
-
-        // io.emit('message', message)
+            io.emit('message', {"user":user, "content":content});
+            tempMessages[socket.id] = {"user":user,"content":content};
+            console.log("Prob", user);
+            // console.log("tempMessages....");
+            await connection.execute(querySelectID, async function(error, result){
+                if(error!=undefined){
+                    console.log('Error:',error);
+                }else{
+                    let i = 1;
+                    for (const sock_id of Object.keys(tempMessages)) {
+                        // console.log("message for now",tempMessages[sock_id].user + tempMessages[sock_id].content);
+                        await connection.execute(queryInsert, [result.rows[0].next_id, tempMessages[sock_id].user, tempMessages[sock_id].content], { prepare: true })
+                        .then(await connection.execute(queryInsertNextId, [result.rows[0].next_id + i], {prepare: true}));
+                        // console.log('wat');
+                        console.log(result.rows[0].next_id);
+                        console.log(i);
+                        // tempMessages. 
+                        // console.log('added');
+                        i+=1;
+                    }
+                }
+            });
+            }
     });
 
     socket.on('onload', function(e) {

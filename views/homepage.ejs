@@ -48,12 +48,14 @@
             li.innerText = message.user ;
             document.getElementById('messages').appendChild(li);
         }
+
         var login = function(){
             var text = document.getElementById('username').value;
             if (text!=""){
                 socket.emit('message',{"user":text,"content":""});
             }
         }
+        
         var handle_input = function(event){
             if (event.keyCode==13){
                 send();
