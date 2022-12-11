@@ -65,7 +65,6 @@ io.on("connection", function(socket) {
             io.emit('message', {"user":user, "content":content});
             tempMessages[socket.id] = {"user":user,"content":content};
             console.log("Prob", user);
-            // console.log("tempMessages....");
             await connection.execute(querySelectID, async function(error, result){
                 if(error!=undefined){
                     console.log('Error:',error);
@@ -75,11 +74,6 @@ io.on("connection", function(socket) {
                         // console.log("message for now",tempMessages[sock_id].user + tempMessages[sock_id].content);
                         await connection.execute(queryInsert, [result.rows[0].next_id, tempMessages[sock_id].user, tempMessages[sock_id].content], { prepare: true })
                         .then(await connection.execute(queryInsertNextId, [result.rows[0].next_id + i], {prepare: true}));
-                        // console.log('wat');
-                        console.log(result.rows[0].next_id);
-                        console.log(i);
-                        // tempMessages. 
-                        // console.log('added');
                         i+=1;
                     }
                 }
