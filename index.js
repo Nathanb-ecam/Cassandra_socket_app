@@ -12,7 +12,7 @@ app.use(express.static('public'));
 //pas d'auto-incrmeent sur cassandra
 const querySelectID = "SELECT next_id FROM ids WHERE id_name = 'message_id'";
 const queryInsertNextId = "UPDATE ids SET next_id = (?) WHERE id_name = 'message_id'";
-const querySelect = 'SELECT message FROM messages'; 
+const querySelect = 'SELECT * FROM messages'; 
 const queryInsert = 'INSERT INTO messages (id, sender, message) VALUES (?,?,?) USING TTL 86400'; 
 let tempMessages = {};
 let connection = require('./db.js');
@@ -28,18 +28,41 @@ app.use('/', routes);
 //Socket
 io.on("connection", function(socket) {
     console.log("Client connected: " + socket.id);
-
+    console.log('Trying to read db');
+    connection.execute(querySelect, function(error,result){
+        if(error!=undefined){
+            console.log('Error:',error);
+        }else{
+            console.log(result.rows);
+            for (var i = 0; i < result.rows.length; i++) {
+                sender = result.rows[i].sender;
+                content = result.rows[i].message;
+                console.log(sender,content);
+                socket.send({"user":sender,"content":content})
+            }
+        }
+      });
     socket.on("disconnect", async function() {
         //Quand un client se déconecte on rajoute ses elements ds la db
         // => plusieurs element identique peuvent se trouver ds la db....
         console.log(socket.id + " disconnected");
-        io.emit('message',{"user":tempMessages[socket.id].Username,"content":"just disconnected ..."});
-        await connection.execute(querySelectID, async function(error, result){
+        io.emit('message',{"user":tempMessages[socket.id].user,"content":"just disconnected ..."});
+        console.log("tempMessages....");
+        await connection.execute(queryInsert, async function(error, result){
             if(error!=undefined){
                 console.log('Error:',error);
             }else{
-                for (var i = 0; i < tempMessages.length; i++) {
-                    await connection.execute(queryInsert, [result.rows[0].next_id, tempMessages[i][1], tempMessages[i][0]], { prepare: true });
+
+                // for (var i = 0; i < tempMessages.length; i++) {
+                //     console.log(result.rows);
+                //     await connection.execute(queryInsert, [result.rows[0].next_id, tempMessages[i][1], tempMessages[i][0]], { prepare: true });
+                //     console.log('wat');
+                //     connection.execute(queryInsertNextId, [result.rows[0].next_id + i], {prepare: true});
+                //     console.log('added');
+                // }
+                for (const sock_id of Object.keys(tempMessages)) {
+                    console.log("message for now",tempMessages[sock_id].user + tempMessages[sock_id].content);
+                    await connection.execute(queryInsert, [result.rows[0].next_id, tempMessages[sock_id].user, tempMessages[sock_id].content], { prepare: true });
                     console.log('wat');
                     connection.execute(queryInsertNextId, [result.rows[0].next_id + i], {prepare: true});
                     console.log('added');
@@ -52,13 +75,14 @@ io.on("connection", function(socket) {
         let user = message.user;
         let content = message.content;
         console.log("Message : " + user);
-        tempMessages[socket.id]={"Username":user,"message":content};
+        // tempMessages[socket.id]={"user":user,"content":content};
         if (content==""){
             console.log(user + " is now connected");
             io.emit('message',{"user":user,"content":"is now connected ..."})
         } 
         else{
             io.emit('message', {"user":user,"content":content});
+            tempMessages[socket.id]={"user":user,"content":content};
             console.log("Prob",user);
         }
         console.log("tempMessages",tempMessages[user]);
@@ -75,7 +99,7 @@ io.on("connection", function(socket) {
                 console.log(result.rows);
                 for (var i = 0; i < result.rows.length; i++) {
                     message = result.rows.messages[i].message;
-                    io.emit('onload', message)
+                    io.emit('onload', {"user":message.sender,"content":message.message})
                 }
             }
           });
