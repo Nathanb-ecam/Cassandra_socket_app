@@ -15,20 +15,20 @@ Chat application were users can define their tag name and have a conversation on
 
 For the node server :
 
-'''
+
 $ npm install express
 $ npm install http
 $ npm install body-parser
 $ npm install ejs
 $ npm install socket-io
 $ npm install cassandra-driver
-'''
+
 
 For the database setup using docker :
-'''
+
 $ docker pull cassandra
 $ cqlsh 
-'''
+
 
 ### Project group :
 
